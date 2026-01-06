@@ -6,14 +6,17 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/antchfx/xmlquery"
+	xml2json "github.com/basgys/goxml2json"
 	"github.com/go-xmlfmt/xmlfmt"
 )
 
 func main() {
 	prettyPrint := flag.Bool("p", false, "pretty print")
 	innerText := flag.Bool("t", false, "inner text")
+	jsonOutput := flag.Bool("j", false, "json output")
 
 	flag.Parse()
 
@@ -29,8 +32,8 @@ func main() {
 
 	args := flag.Args()
 
-	if len(args) == 0 && *prettyPrint {
-		fmt.Println(xmlfmt.FormatXML(doc.OutputXML(*prettyPrint), "", "  "))
+	if len(args) == 0 {
+		output(doc, *jsonOutput, *prettyPrint)
 		return
 	}
 
@@ -46,12 +49,25 @@ func main() {
 				continue
 			}
 
-			if *prettyPrint {
-				fmt.Println(xmlfmt.FormatXML(n.OutputXML(*prettyPrint), "", "  "))
-				continue
-			}
-
-			fmt.Println(n.OutputXML(true))
+			output(n, *jsonOutput, *prettyPrint)
 		}
 	}
+}
+
+func output(n *xmlquery.Node, jsonOutput bool, prettyPrint bool) {
+	if jsonOutput {
+		r, err := xml2json.Convert(strings.NewReader(n.OutputXML(true)))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Fprint(os.Stdout, r.String())
+		return
+	}
+
+	if prettyPrint {
+		fmt.Fprint(os.Stdout, xmlfmt.FormatXML(n.OutputXML(true), "", "  "))
+		return
+	}
+
+	fmt.Fprint(os.Stdout, n.OutputXML(true))
 }
